@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-// 下記2行を追加
 use Validator;
 use App\Models\Todo;
+use Auth;
 
 
 class TodoController extends Controller
@@ -15,10 +15,16 @@ class TodoController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+
+    public function __construct()
+    {
+    $this->middleware(['auth']);
+    }
+
     public function index()
-    { 
-          // モデルに定義した関数を実行する．
-        $todos = Todo::getAllOrderByDeadline();
+    {
+        // モデルに定義した関数を実行する．
+        $todos = Todo::getMyAllOrderByDeadline();
         return view('todo.index', [
             'todos' => $todos
         ]);
@@ -44,7 +50,7 @@ class TodoController extends Controller
     {
         // バリデーション
         $validator = Validator::make($request->all(), [
-            'todo' => 'required | max:191',
+            'todo' => 'required | max:255',
             'deadline' => 'required',
         ]);
         // バリデーション:エラー
@@ -54,9 +60,11 @@ class TodoController extends Controller
             ->withInput()
             ->withErrors($validator);
         }
+        // フォームから送信されてきたデータとユーザIDをマージする
+        $data = $request->merge(['user_id' => Auth::user()->id])->all();
         // create()は最初から用意されている関数
         // 戻り値は挿入されたレコードの情報
-        $result = Todo::create($request->all());
+        $result = Todo::create($data);
         // ルーティング「todo.index」にリクエスト送信（一覧ページに移動）
         return redirect()->route('todo.index');
     }
