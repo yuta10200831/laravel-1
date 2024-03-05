@@ -12,7 +12,7 @@
  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">
  <!-- Styles -->
  <link rel="stylesheet" href="{{ secure_asset('css/app.css') }}">
-
+ <script src="https://cdn.tailwindcss.com"></script>
  <!-- Scripts -->
  <script src="{{ secure_asset('js/app.js') }}" defer></script>
 </head>
