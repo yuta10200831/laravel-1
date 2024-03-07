@@ -6,7 +6,12 @@ use Illuminate\Http\Request;
 use Validator;
 use App\Models\Todo;
 use Auth;
-
+use App\UseCase\Todo\CreateTodoInput;
+use App\UseCase\Todo\CreateTodoInteractor;
+use App\UseCase\Todo\EditTodoInput;
+use App\UseCase\Todo\EditTodoInteractor;
+use App\UseCase\Todo\ShowTodoInput;
+use App\UseCase\Todo\ShowTodoInteractor;
 
 class TodoController extends Controller
 {
@@ -48,24 +53,23 @@ class TodoController extends Controller
      */
     public function store(Request $request)
     {
-        // バリデーション
         $validator = Validator::make($request->all(), [
             'todo' => 'required | max:255',
             'deadline' => 'required',
         ]);
-        // バリデーション:エラー
+
         if ($validator->fails()) {
             return redirect()
-            ->route('todo.create')
-            ->withInput()
-            ->withErrors($validator);
+                ->route('todo.create')
+                ->withInput()
+                ->withErrors($validator);
         }
-        // フォームから送信されてきたデータとユーザIDをマージする
-        $data = $request->merge(['user_id' => Auth::user()->id])->all();
-        // create()は最初から用意されている関数
-        // 戻り値は挿入されたレコードの情報
-        $result = Todo::create($data);
-        // ルーティング「todo.index」にリクエスト送信（一覧ページに移動）
+
+        $input = new CreateTodoInput(Auth::user()->id, $request->input('todo'), $request->input('deadline'), $request->input('comment'));
+
+        $interactor = new CreateTodoInteractor();
+        $output = $interactor->handle($input);
+
         return redirect()->route('todo.index');
     }
 
@@ -77,8 +81,11 @@ class TodoController extends Controller
      */
     public function show($id)
     {
-        $todo = Todo::find($id);
-        return view('todo.show', ['todo' => $todo]);
+        $input = new ShowTodoInput($id);
+        $interactor = new ShowTodoInteractor();
+        $output = $interactor->handle($input);
+
+        return view('todo.show', ['todo' => $output->getTodo()]);
     }
 
     /**
@@ -104,21 +111,23 @@ class TodoController extends Controller
     {
         //バリデーション
         $validator = Validator::make($request->all(), [
-            'todo' => 'required | max:191',
+            'todo' => 'required | max:255',
             'deadline' => 'required',
         ]);
+
         //バリデーション:エラー
         if ($validator->fails()) {
             return redirect()
-            ->route('todo.edit', $id)
-            ->withInput()
-            ->withErrors($validator);
+                ->route('todo.edit', $id)
+                ->withInput()
+                ->withErrors($validator);
         }
-        //データ更新処理
-        // updateは更新する情報がなくても更新が走る（updated_atが更新される）
-        $result = Todo::find($id)->update($request->all());
-        // fill()save()は更新する情報がない場合は更新が走らない（updated_atが更新されない）
-        // $redult = Todo::find($id)->fill($request->all())->save();
+
+        $input = new EditTodoInput($id, $request->input('todo'), $request->input('deadline'), $request->input('comment'));
+        $interactor = new EditTodoInteractor();
+        $output = $interactor->handle($input);
+
+        // 更新が完了したら、Todo一覧にリダイレクトする
         return redirect()->route('todo.index');
     }
 
