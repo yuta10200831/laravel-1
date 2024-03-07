@@ -12,6 +12,9 @@ use App\UseCase\Todo\EditTodoInput;
 use App\UseCase\Todo\EditTodoInteractor;
 use App\UseCase\Todo\ShowTodoInput;
 use App\UseCase\Todo\ShowTodoInteractor;
+use App\Models\ValueObject\Todo\TodoValue;
+use App\Models\ValueObject\Todo\Deadline;
+use App\Models\ValueObject\Todo\Comment;
 
 class TodoController extends Controller
 {
@@ -54,8 +57,9 @@ class TodoController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'todo' => 'required | max:255',
-            'deadline' => 'required',
+            'todo' => 'required|max:255',
+            'deadline' => 'required|date',
+            'comment' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -65,7 +69,12 @@ class TodoController extends Controller
                 ->withErrors($validator);
         }
 
-        $input = new CreateTodoInput(Auth::user()->id, $request->input('todo'), $request->input('deadline'), $request->input('comment'));
+        $input = new CreateTodoInput(
+            Auth::user()->id,
+            new TodoValue($request->input('todo')),
+            new Deadline($request->input('deadline')),
+            new Comment($request->input('comment'))
+        );
 
         $interactor = new CreateTodoInteractor();
         $output = $interactor->handle($input);
@@ -107,15 +116,15 @@ class TodoController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
+
     public function update(Request $request, $id)
     {
-        //バリデーション
         $validator = Validator::make($request->all(), [
-            'todo' => 'required | max:255',
-            'deadline' => 'required',
+            'todo' => 'required|max:255',
+            'deadline' => 'required|date',
+            'comment' => 'nullable|string'
         ]);
 
-        //バリデーション:エラー
         if ($validator->fails()) {
             return redirect()
                 ->route('todo.edit', $id)
@@ -123,11 +132,16 @@ class TodoController extends Controller
                 ->withErrors($validator);
         }
 
-        $input = new EditTodoInput($id, $request->input('todo'), $request->input('deadline'), $request->input('comment'));
+        $input = new EditTodoInput(
+            $id,
+            new TodoValue($request->input('todo')),
+            new Deadline($request->input('deadline')),
+            new Comment($request->input('comment'))
+        );
+
         $interactor = new EditTodoInteractor();
         $output = $interactor->handle($input);
 
-        // 更新が完了したら、Todo一覧にリダイレクトする
         return redirect()->route('todo.index');
     }
 
